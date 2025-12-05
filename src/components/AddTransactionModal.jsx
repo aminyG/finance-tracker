@@ -1,4 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useContext } from "react";
+import { NumericFormat } from "react-number-format";
+import { CurrencyContext } from "../context/CurrencyContext";
 
 const defaultCategories = [
   "Salary",
@@ -16,6 +18,7 @@ export default function AddTransactionModal({ onAdd }) {
   const [category, setCategory] = useState(defaultCategories[0]);
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [note, setNote] = useState("");
+  const { selectedCurrency } = useContext(CurrencyContext);
 
   function reset() {
     setTitle("");
@@ -28,20 +31,23 @@ export default function AddTransactionModal({ onAdd }) {
 
   function submit(e) {
     e.preventDefault();
-    const parsed = parseFloat(amount);
-    if (Number.isNaN(parsed) || parsed <= 0) {
+
+    if (!amount || amount <= 0) {
       alert("Masukkan nominal yang valid");
       return;
     }
+
     onAdd({
       id: Date.now().toString(),
       title,
-      amount: parsed,
+      amount,
       type,
       category,
       date,
       note,
+      currency: selectedCurrency,
     });
+
     reset();
     setOpen(false);
   }
@@ -71,11 +77,18 @@ export default function AddTransactionModal({ onAdd }) {
               onChange={(e) => setTitle(e.target.value)}
               className="w-full mb-2 p-2 border rounded"
             />
+            <label className="block text-sm">Amount ({selectedCurrency})</label>
 
-            <label className="block text-sm">Amount (numeric)</label>
-            <input
+            <NumericFormat
               value={amount}
-              onChange={(e) => setAmount(e.target.value)}
+              thousandSeparator="."
+              decimalSeparator=","
+              allowNegative={false}
+              decimalScale={2}
+              prefix={selectedCurrency + " "}
+              onValueChange={(values) => {
+                setAmount(values.floatValue || "");
+              }}
               className="w-full mb-2 p-2 border rounded"
             />
 
