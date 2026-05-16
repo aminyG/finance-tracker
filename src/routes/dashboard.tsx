@@ -64,8 +64,8 @@ function DashboardPage() {
           </button>
         </div>
 
-        {/* Quick nav cards */}
-        <div className="grid grid-cols-2 gap-3 mb-6">
+        {/* Quick nav */}
+        <div className="grid grid-cols-2 gap-3">
           <Link
             to="/accounts"
             className="bg-white rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow"
@@ -79,6 +79,20 @@ function DashboardPage() {
           >
             <p className="text-2xl mb-1">➕</p>
             <p className="font-semibold text-white text-sm">Add Transaction</p>
+          </Link>
+          <Link
+            to="/categories"
+            className="bg-white rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow"
+          >
+            <p className="text-2xl mb-1">🏷️</p>
+            <p className="font-semibold text-gray-800 text-sm">Categories</p>
+          </Link>
+          <Link
+            to="/transactions"
+            className="bg-white rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow"
+          >
+            <p className="text-2xl mb-1">📋</p>
+            <p className="font-semibold text-gray-800 text-sm">Transactions</p>
           </Link>
         </div>
 

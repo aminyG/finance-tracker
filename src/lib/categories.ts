@@ -1,5 +1,13 @@
-// src/lib/categories.ts
-import { collection, addDoc, getDocs, query, where } from 'firebase/firestore'
+import {
+  collection,
+  addDoc,
+  getDocs,
+  query,
+  where,
+  deleteDoc,
+  updateDoc,
+  doc,
+} from 'firebase/firestore'
 import { db } from '../firebase'
 
 export interface Category {
@@ -40,4 +48,19 @@ export async function seedDefaultCategories(userId: string): Promise<void> {
     addDoc(collection(db, 'categories'), { userId, name }),
   )
   await Promise.all(promises)
+}
+
+export async function addCategory(userId: string, name: string): Promise<void> {
+  await addDoc(collection(db, 'categories'), { userId, name })
+}
+
+export async function deleteCategory(categoryId: string): Promise<void> {
+  await deleteDoc(doc(db, 'categories', categoryId))
+}
+
+export async function renameCategory(
+  categoryId: string,
+  newName: string,
+): Promise<void> {
+  await updateDoc(doc(db, 'categories', categoryId), { name: newName })
 }
