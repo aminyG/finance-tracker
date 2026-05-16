@@ -1,6 +1,6 @@
 // src/routes/transactions/new.tsx
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { addTransaction } from '../../lib/transactions'
 import type { TransactionType } from '../../lib/transactions'
@@ -8,6 +8,7 @@ import { getAccounts } from '../../lib/accounts'
 import type { Account } from '../../lib/accounts'
 import { getCategories, seedDefaultCategories } from '../../lib/categories'
 import type { Category } from '../../lib/categories'
+import { scanReceipt } from '../../lib/gemini'
 import ProtectedRoute from '../../components/ProtectedRoute'
 
 export const Route = createFileRoute('/transactions/new')({
@@ -21,6 +22,7 @@ export const Route = createFileRoute('/transactions/new')({
 function AddTransactionPage() {
   const { user } = useAuth()
   const navigate = useNavigate()
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [accounts, setAccounts] = useState<Account[]>([])
   const [categories, setCategories] = useState<Category[]>([])
@@ -31,24 +33,25 @@ function AddTransactionPage() {
   const [categoryId, setCategoryId] = useState('')
   const [amount, setAmount] = useState('')
   const [note, setNote] = useState('')
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]) // today
+  const [date, setDate] = useState(new Date().toISOString().split('T')[0])
 
   const [loading, setLoading] = useState(false)
+  const [scanning, setScanning] = useState(false)
+  const [scanSuccess, setScanSuccess] = useState(false)
   const [error, setError] = useState('')
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
 
-  // Load accounts and categories on mount
   useEffect(() => {
     if (!user) return
     async function loadData() {
       try {
-        await seedDefaultCategories(user!.uid) // seed if first time
+        await seedDefaultCategories(user!.uid)
         const [accs, cats] = await Promise.all([
           getAccounts(user!.uid),
           getCategories(user!.uid),
         ])
         setAccounts(accs)
         setCategories(cats)
-        // Set defaults so dropdowns aren't empty
         if (accs.length > 0) setAccountId(accs[0].id)
         if (cats.length > 0) setCategoryId(cats[0].id)
       } catch {
@@ -59,6 +62,49 @@ function AddTransactionPage() {
     }
     loadData()
   }, [user])
+
+  async function handleScan(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Show image preview
+    setPreviewUrl(URL.createObjectURL(file))
+    setScanning(true)
+    setScanSuccess(false)
+    setError('')
+
+    try {
+      // Send available category names to AI
+      const categoryNames = categories.map((c) => c.name)
+
+      const result = await scanReceipt(file, categoryNames)
+
+      // Auto-fill fields
+      if (result.amount !== null) setAmount(String(result.amount))
+      if (result.date !== null) setDate(result.date)
+      if (result.note !== null) setNote(result.note)
+
+      // Match category name -> category ID
+      if (result.category !== null) {
+        const matched = categories.find(
+          (c) => c.name.toLowerCase() === result.category!.toLowerCase(),
+        )
+
+        if (matched) setCategoryId(matched.id)
+      }
+
+      setScanSuccess(true)
+    } catch (err: any) {
+      setError(err.message ?? 'Scan failed. Try a clearer photo.')
+    } finally {
+      setScanning(false)
+
+      // Reset file input so same file can be re-scanned
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -107,7 +153,6 @@ function AddTransactionPage() {
     )
   }
 
-  // Can't add transaction without at least one account
   if (accounts.length === 0) {
     return (
       <div className="min-h-screen bg-gray-50 p-6 flex flex-col items-center justify-center">
@@ -140,6 +185,77 @@ function AddTransactionPage() {
           <h1 className="text-2xl font-bold text-gray-800">Add Transaction</h1>
         </div>
 
+        {/* Receipt Scan Card */}
+        <div className="bg-white rounded-2xl shadow-sm p-5 mb-4">
+          <p className="text-sm font-medium text-gray-700 mb-3">
+            Scan Receipt{' '}
+            <span className="text-gray-400 font-normal">
+              (optional — auto-fills the form)
+            </span>
+          </p>
+
+          {/* Preview */}
+          {previewUrl && (
+            <img
+              src={previewUrl}
+              alt="Receipt preview"
+              className="w-full h-40 object-cover rounded-lg mb-3"
+            />
+          )}
+
+          {/* Scan status */}
+          {scanning && (
+            <div className="flex items-center gap-2 text-blue-500 text-sm mb-3">
+              <svg
+                className="animate-spin w-4 h-4"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                />
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8v8z"
+                />
+              </svg>
+              Scanning receipt with AI...
+            </div>
+          )}
+
+          {scanSuccess && !scanning && (
+            <p className="text-green-500 text-sm mb-3">
+              ✓ Receipt scanned! Review the fields below.
+            </p>
+          )}
+
+          {/* Hidden file input */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            onChange={handleScan}
+            className="hidden"
+          />
+
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={scanning}
+            className="w-full border-2 border-dashed border-gray-200 rounded-lg py-3 text-sm text-gray-500 hover:border-blue-300 hover:text-blue-500 transition-colors disabled:opacity-50"
+          >
+            {scanning ? 'Scanning...' : '📷 Upload or take a photo of receipt'}
+          </button>
+        </div>
+
+        {/* Transaction Form */}
         <div className="bg-white rounded-2xl shadow-sm p-6">
           {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
 
@@ -251,7 +367,7 @@ function AddTransactionPage() {
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || scanning}
               className="bg-blue-500 text-white rounded-lg py-2 text-sm font-medium hover:bg-blue-600 disabled:opacity-50 mt-2"
             >
               {loading ? 'Saving...' : 'Save Transaction'}
