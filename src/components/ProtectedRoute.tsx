@@ -1,5 +1,6 @@
 // src/components/ProtectedRoute.tsx
-import { Navigate } from '@tanstack/react-router'
+import { useEffect } from 'react'
+import { useNavigate } from '@tanstack/react-router'
 import { useAuth } from '../context/AuthContext'
 
 interface Props {
@@ -8,7 +9,15 @@ interface Props {
 
 export default function ProtectedRoute({ children }: Props) {
   const { user } = useAuth()
+  const navigate = useNavigate()
 
+  useEffect(() => {
+    if (user === null) {
+      navigate({ to: '/login' })
+    }
+  }, [user, navigate])
+
+  // Still checking auth state
   if (user === undefined) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -17,8 +26,9 @@ export default function ProtectedRoute({ children }: Props) {
     )
   }
 
+  // Redirecting
   if (user === null) {
-    return <Navigate to="/login" />
+    return null
   }
 
   return <>{children}</>
