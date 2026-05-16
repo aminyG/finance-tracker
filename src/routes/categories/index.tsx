@@ -7,8 +7,8 @@ import {
   addCategory,
   deleteCategory,
   renameCategory,
-  type Category,
 } from '../../lib/categories'
+import type { Category } from '../../lib/categories'
 import ProtectedRoute from '../../components/ProtectedRoute'
 
 export const Route = createFileRoute('/categories/')({
