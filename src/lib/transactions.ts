@@ -92,3 +92,67 @@ export async function addTransaction(
     balance: increment(type === 'income' ? amount : -amount),
   })
 }
+// Group transactions by month for income vs expense bar chart
+export function groupByMonth(transactions: Transaction[]): {
+  month: string
+  income: number
+  expense: number
+}[] {
+  const map: Record<string, { income: number; expense: number }> = {}
+
+  transactions.forEach((tx) => {
+    const month = tx.date.slice(0, 7) // "YYYY-MM"
+    map[month] ??= { income: 0, expense: 0 }
+    if (tx.type === 'income') map[month].income += tx.amount
+    else map[month].expense += tx.amount
+  })
+
+  return Object.entries(map)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([month, data]) => ({
+      month: new Date(month + '-01').toLocaleDateString('id-ID', {
+        month: 'short',
+        year: '2-digit',
+      }),
+      ...data,
+    }))
+}
+
+// Group transactions by category for pie chart
+export function groupByCategory(
+  transactions: Transaction[],
+  categoryMap: Record<string, string>,
+): { name: string; value: number }[] {
+  const map: Record<string, number> = {}
+
+  transactions
+    .filter((tx) => tx.type === 'expense')
+    .forEach((tx) => {
+      const name = categoryMap[tx.categoryId] ?? 'Unknown'
+      map[name] = (map[name] ?? 0) + tx.amount
+    })
+
+  return Object.entries(map)
+    .sort(([, a], [, b]) => b - a)
+    .map(([name, value]) => ({ name, value }))
+}
+
+// Balance over time for line chart
+export function balanceOverTime(transactions: Transaction[]): {
+  date: string
+  balance: number
+}[] {
+  const sorted = [...transactions].sort((a, b) => a.date.localeCompare(b.date))
+
+  let running = 0
+  return sorted.map((tx) => {
+    running += tx.type === 'income' ? tx.amount : -tx.amount
+    return {
+      date: new Date(tx.date).toLocaleDateString('id-ID', {
+        day: 'numeric',
+        month: 'short',
+      }),
+      balance: running,
+    }
+  })
+}

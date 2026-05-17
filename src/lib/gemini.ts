@@ -85,3 +85,84 @@ export async function scanReceipt(
     throw new Error('Failed to parse receipt data. Try a clearer photo.')
   }
 }
+
+export interface BankTransaction {
+  date: string
+  description: string
+  amount: number
+  type: 'income' | 'expense'
+  category: string | null // ← add this
+}
+
+export async function parseBankCSV(
+  file: File,
+  categories: string[], // ← add this parameter
+): Promise<BankTransaction[]> {
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
+
+  const prompt = `
+    You are a bank statement parser. Analyze this bank mutation document and extract all transactions.
+    
+    The file may be from any Indonesian bank (BCA, Mandiri, BNI, BRI, etc.) in any format.
+    Figure out which columns represent: date, description/note, debit (expense), credit (income).
+
+    Also assign the best matching category for each transaction from this list: ${categories.join(', ')}
+
+    Respond ONLY with a valid JSON array, no markdown, no explanation:
+    [
+      {
+        "date": "<YYYY-MM-DD>",
+        "description": "<transaction description>",
+        "amount": <positive number>,
+        "type": "<income or expense>",
+        "category": "<one of the category names from the list above, or null>"
+      }
+    ]
+
+    Rules:
+    - date must be YYYY-MM-DD format
+    - amount must be a positive number (no negative values)
+    - type is "income" for credit/masuk, "expense" for debit/keluar
+    - category must exactly match one of the provided category names
+    - Skip rows that are headers, summaries, or opening/closing balance
+    - description should be a clean readable label
+    - Do not include any text outside the JSON array
+  `
+
+  const base64 = await fileToBase64(file)
+
+  let mimeType: string = file.type
+  if (!mimeType || mimeType === '') {
+    const ext = file.name.split('.').pop()?.toLowerCase()
+    if (ext === 'pdf') mimeType = 'application/pdf'
+    else if (ext === 'csv') mimeType = 'text/plain'
+    else mimeType = 'text/plain'
+  }
+
+  const result = await model.generateContent([
+    prompt,
+    {
+      inlineData: {
+        mimeType,
+        data: base64,
+      },
+    },
+  ])
+
+  const text = result.response.text().trim()
+
+  try {
+    const clean = text.replace(/```json|```/g, '').trim()
+    const parsed = JSON.parse(clean)
+    if (!Array.isArray(parsed)) throw new Error('Not an array')
+    return parsed.filter(
+      (tx: any) =>
+        typeof tx.date === 'string' &&
+        typeof tx.amount === 'number' &&
+        typeof tx.description === 'string' &&
+        (tx.type === 'income' || tx.type === 'expense'),
+    )
+  } catch {
+    throw new Error('Failed to parse bank statement. Try a different file.')
+  }
+}
