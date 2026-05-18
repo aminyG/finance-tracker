@@ -1,28 +1,24 @@
-// Import the functions you need from the SDKs you need
 import { initializeApp } from 'firebase/app'
 import { getAnalytics, isSupported } from 'firebase/analytics'
 import { getAuth, GoogleAuthProvider } from 'firebase/auth'
 import { getFirestore } from 'firebase/firestore'
 
-// Your web app's Firebase configuration
 const firebaseConfig = {
-  apiKey: 'AIzaSyCFnACYQkAJVirwb-KHjjTJiHLP0yACbF0',
-  authDomain: 'finance-tracker-919b2.firebaseapp.com',
-  projectId: 'finance-tracker-919b2',
-  storageBucket: 'finance-tracker-919b2.firebasestorage.app',
-  messagingSenderId: '547755838846',
-  appId: '1:547755838846:web:9369a43c928456d8dc372f',
-  measurementId: 'G-K18VCVL3J9',
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
 }
 
-// Initialize Firebase
 const app = initializeApp(firebaseConfig)
 
 export const auth = getAuth(app)
 export const db = getFirestore(app)
 export const googleProvider = new GoogleAuthProvider()
 
-// Analytics (browser only)
 if (typeof window !== 'undefined') {
   isSupported().then((supported) => {
     if (supported) {
