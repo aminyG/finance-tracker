@@ -29,6 +29,7 @@ import {
   Line,
   CartesianGrid,
 } from 'recharts'
+import ThemeToggle from '../components/ThemeToggle'
 
 export const Route = createFileRoute('/dashboard')({
   component: () => (
@@ -122,12 +123,15 @@ function DashboardPage() {
             <h1 className="text-2xl font-bold text-gray-800">Dashboard</h1>
             <p className="text-sm text-gray-500">{user?.email}</p>
           </div>
-          <button
-            onClick={handleLogout}
-            className="text-sm text-red-500 hover:underline"
-          >
-            Logout
-          </button>
+          <div className="flex items-center gap-3">
+            <ThemeToggle />
+            <button
+              onClick={handleLogout}
+              className="text-sm text-red-500 hover:underline"
+            >
+              Logout
+            </button>
+          </div>
         </div>
 
         {/* Quick nav */}
