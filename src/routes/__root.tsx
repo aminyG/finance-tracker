@@ -4,7 +4,7 @@ import { TanStackDevtools } from '@tanstack/react-devtools'
 
 import Footer from '../components/Footer'
 import Header from '../components/Header'
-import BottomNav from '#/components/bottomNav'
+import BottomNav from '#/components/BottomNav'
 
 import { AuthProvider } from '../context/AuthContext'
 
